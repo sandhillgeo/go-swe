@@ -8,7 +8,7 @@ import (
 )
 
 import (
-	//"github.com/pkg/errors"
+//"github.com/pkg/errors"
 )
 
 import (
@@ -54,7 +54,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	sgpkg := swe.NewSensorGeoPackage(output_uri);
+	sgpkg := swe.NewSensorGeoPackage(output_uri)
 
 	err := sgpkg.Init()
 	if err != nil {

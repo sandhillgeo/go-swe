@@ -5,8 +5,8 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 mkdir -p $DIR/../bin
 
 echo "******************"
-echo "Formatting $(realpath $DIR/../gpkg)"
-cd $DIR/../gpkg
+echo "Formatting $(realpath $DIR/../swe)"
+cd $DIR/../swe
 go fmt
 echo "Done formatting."
 echo "******************"

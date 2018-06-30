@@ -36,6 +36,79 @@ func (sgpkg *SensorGeoPackage) AutoMigrate() {
 	sgpkg.GeoPackage.DB.AutoMigrate(SensorConnectionInformationMapping{})
 	sgpkg.GeoPackage.DB.AutoMigrate(SensorObservableProperty{})
 	sgpkg.GeoPackage.DB.AutoMigrate(SensorObservablePropertyMapping{})
+	sgpkg.GeoPackage.DB.AutoMigrate(gpkg.Relation{})
+
+	relation := gpkg.Relation{
+		BaseTableName:        Sensor{}.TableName(),
+		BasePrimaryColumn:    "id",
+		RelatedTableName:     SensorConnectionInformation{}.TableName(),
+		RelatedPrimaryColumn: "id",
+		RelationName:         "simple_attributes",
+		MappingTableName:     SensorConnectionInformationMapping{}.TableName(),
+	}
+	sgpkg.GeoPackage.DB.Create(&relation)
+
+	relation = gpkg.Relation{
+		BaseTableName:        Sensor{}.TableName(),
+		BasePrimaryColumn:    "id",
+		RelatedTableName:     SensorObservableProperty{}.TableName(),
+		RelatedPrimaryColumn: "id",
+		RelationName:         "simple_attributes",
+		MappingTableName:     SensorObservablePropertyMapping{}.TableName(),
+	}
+	sgpkg.GeoPackage.DB.Create(&relation)
+
+	relation = gpkg.Relation{
+		BaseTableName:        SensorObservableProperty{}.TableName(),
+		BasePrimaryColumn:    "id",
+		RelatedTableName:     ObservedAirTemperature{}.TableName(),
+		RelatedPrimaryColumn: "id",
+		RelationName:         "simple_attributes",
+		MappingTableName:     ObservedAirTemperatureMapping{}.TableName(),
+	}
+	sgpkg.GeoPackage.DB.Create(&relation)
+
+	relation = gpkg.Relation{
+		BaseTableName:        SensorObservableProperty{}.TableName(),
+		BasePrimaryColumn:    "id",
+		RelatedTableName:     ObservedWindSpeed{}.TableName(),
+		RelatedPrimaryColumn: "id",
+		RelationName:         "simple_attributes",
+		MappingTableName:     ObservedWindSpeedMapping{}.TableName(),
+	}
+	sgpkg.GeoPackage.DB.Create(&relation)
+
+	relation = gpkg.Relation{
+		BaseTableName:        SensorObservableProperty{}.TableName(),
+		BasePrimaryColumn:    "id",
+		RelatedTableName:     ObservedBlob{}.TableName(),
+		RelatedPrimaryColumn: "id",
+		RelationName:         "media",
+		MappingTableName:     ObservedBlobMapping{}.TableName(),
+	}
+	sgpkg.GeoPackage.DB.Create(&relation)
+
+	table_names := []string{
+		gpkg.Relation{}.TableName(),
+		ObservedAirTemperatureMapping{}.TableName(),
+		ObservedWindSpeedMapping{}.TableName(),
+		ObservedBlobMapping{}.TableName(),
+		SensorConnectionInformationMapping{}.TableName(),
+		SensorObservablePropertyMapping{}.TableName(),
+	}
+
+	sgpkg.GeoPackage.DB.AutoMigrate(gpkg.Extension{})
+	for _, table_name := range table_names {
+		extension := gpkg.Extension{
+			Table:      table_name,
+			Column:     nil,
+			Extension:  "related_tables",
+			Definition: "TBD",
+			Scope:      "read-write",
+		}
+		sgpkg.GeoPackage.DB.Create(&extension)
+	}
+
 }
 
 func (sgpkg *SensorGeoPackage) GetSensorsWithinDistance(longitude float64, latitude float64, distance float64) (*SensorList, error) {
@@ -46,7 +119,45 @@ func (sgpkg *SensorGeoPackage) GetSensorsWithinDistance(longitude float64, latit
 	if err != nil {
 		return &SensorList{}, err
 	}
+
 	return &SensorList{sensors: sensors}, err
+}
+
+func (sgpkg *SensorGeoPackage) GetSensorsWithinDistanceByWifiNetwork(longitude float64, latitude float64, distance float64) (*SensorMapByWifiNetwork, error) {
+
+	sensorMapByWifiNetwork := &SensorMapByWifiNetwork{}
+
+	sensorList, err := sgpkg.GetSensorsWithinDistance(longitude, latitude, distance)
+	if err != nil {
+		return sensorMapByWifiNetwork, err
+	}
+
+	m := map[*WifiNetwork][]Sensor{}
+	for i := 0; i < sensorList.Size(); i++ {
+		sensor := sensorList.Item(i)
+		sensorConnectionInformation, err := sgpkg.GetConnectionInformation(sensor)
+		if err != nil {
+			return sensorMapByWifiNetwork, err
+		}
+		var network *WifiNetwork
+		for k, _ := range m {
+			if sensorConnectionInformation.WiFiSSID == k.WiFiSSID && sensorConnectionInformation.WiFiPassword == k.WiFiPassword {
+				network = k
+			}
+		}
+		if network == nil {
+			network = &WifiNetwork{WiFiSSID: sensorConnectionInformation.WiFiSSID, WiFiPassword: sensorConnectionInformation.WiFiPassword}
+			m[network] = make([]Sensor, 0)
+		}
+		m[network] = append(m[network], *sensor)
+	}
+
+	m2 := map[WifiNetwork]SensorList{}
+	for network, sensors := range m {
+		m2[*network] = SensorList{sensors: sensors}
+	}
+
+	return &SensorMapByWifiNetwork{sensors: m2}, err
 }
 
 func (sgpkg *SensorGeoPackage) GetConnectionInformation(s *Sensor) (*SensorConnectionInformation, error) {
@@ -210,12 +321,7 @@ func (sgpkg *SensorGeoPackage) RequestGetResult(sci *SensorConnectionInformation
 	return &ResultBlob{Blob: body}, nil
 }
 
-func (sgpkg *SensorGeoPackage) Run() error {
-
-	sensors, err := sgpkg.GetSensorsWithinDistance(0, 0, 0)
-	if err != nil {
-		return err
-	}
+func (sgpkg *SensorGeoPackage) Sync(network WifiNetwork, sensors SensorList) error {
 
 	for i := 0; i < sensors.Size(); i++ {
 		sensor := sensors.Item(i)
@@ -247,21 +353,40 @@ func (sgpkg *SensorGeoPackage) Run() error {
 				return err
 			}
 
-			switch result.(type) {
-			case ResultAirTemperature:
-				result2 := result.(ResultAirTemperature)
-				sgpkg.GeoPackage.DB.Create(&ObservedAirTemperature{Time: result2.Time, Temperature: result2.Temperature})
-			case ResultWindSpeed:
-				result2 := result.(ResultWindSpeed)
-				sgpkg.GeoPackage.DB.Create(&ObservedWindSpeed{Time: result2.Time, WindSpeed: result2.WindSpeed})
-			case ResultBlob:
-				result2 := result.(ResultBlob)
-				sgpkg.GeoPackage.DB.Create(&ObservedBlob{Blob: result2.Blob})
-			}
+			sgpkg.AddObservation(observableProperty, result)
 		}
-
 	}
 
 	return nil
 
+}
+
+func (sgpkg *SensorGeoPackage) AddObservation(observableProperty *SensorObservableProperty, result interface{}) error {
+	switch result.(type) {
+	case ResultAirTemperature:
+		result2 := result.(ResultAirTemperature)
+		observedAirTemperature := ObservedAirTemperature{Time: result2.Time, Temperature: result2.Temperature}
+		err := sgpkg.GeoPackage.DB.Create(&observedAirTemperature).Error
+		if err != nil {
+			return err
+		}
+		sgpkg.GeoPackage.DB.Create(&ObservedAirTemperatureMapping{BaseId: observableProperty.Id, RelatedId: observedAirTemperature.Id})
+	case ResultWindSpeed:
+		result2 := result.(ResultWindSpeed)
+		observedWindSpeed := ObservedWindSpeed{Time: result2.Time, WindSpeed: result2.WindSpeed}
+		err := sgpkg.GeoPackage.DB.Create(&observedWindSpeed).Error
+		if err != nil {
+			return err
+		}
+		sgpkg.GeoPackage.DB.Create(&ObservedWindSpeedMapping{BaseId: observableProperty.Id, RelatedId: observedWindSpeed.Id})
+	case ResultBlob:
+		result_blob := result.(ResultBlob)
+		observedBlob := ObservedBlob{Blob: result_blob.Blob}
+		err := sgpkg.GeoPackage.DB.Create(&observedBlob).Error
+		if err != nil {
+			return err
+		}
+		sgpkg.GeoPackage.DB.Create(&ObservedBlobMapping{BaseId: observableProperty.Id, RelatedId: observedBlob.Id})
+	}
+	return nil
 }

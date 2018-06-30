@@ -1,7 +1,7 @@
 package swe
 
 type SensorObservableProperty struct {
-	Id                       int    `gorm:"column:id;not null;primary_key"`
+	Id                       int    `gorm:"column:id;not null;unique;primary_key;AUTO_INCREMENT"`
 	SensorIdentifier         string `gorm:"column:sensor_identifier;not null"`
 	SensorProcedure          string `gorm:"column:sensor_procedure;not null"`
 	SensorObservableProperty string `gorm:"column:observable_property;not null"`

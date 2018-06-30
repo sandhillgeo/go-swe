@@ -1,7 +1,7 @@
 package swe
 
 import (
-  "time"
+	"time"
 )
 
 type ResultAirTemperature struct {
