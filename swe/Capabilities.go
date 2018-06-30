@@ -1,4 +1,3 @@
-type swe
+package swe
 
-type CapabilitiesDocument struct {
-}
+type CapabilitiesDocument struct{}

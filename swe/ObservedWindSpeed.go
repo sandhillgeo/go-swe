@@ -1,9 +1,13 @@
 package swe
 
+import (
+	"time"
+)
+
 type ObservedWindSpeed struct {
-  Id int        `gorm:"column:id;not null;primary_key"`
-  Time time.Time `json:"time"`
-  WindSpeed float64 `json:"wind_speed"`
+	Id        int       `gorm:"column:id;not null;primary_key"`
+	Time      time.Time `json:"time"`
+	WindSpeed float64   `json:"wind_speed"`
 }
 
 func (ObservedWindSpeed) TableName() string {
