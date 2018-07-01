@@ -12,7 +12,7 @@ func (m *SensorMapByWifiNetwork) Keys() *WifiNetworkList {
 	return &WifiNetworkList{networks: networks}
 }
 
-func (m *SensorMapByWifiNetwork) Get(key WifiNetwork) *SensorList {
-	sensorList := m.sensors[key]
+func (m *SensorMapByWifiNetwork) Get(key *WifiNetwork) *SensorList {
+	sensorList := m.sensors[*key]
 	return &sensorList
 }

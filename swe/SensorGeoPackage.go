@@ -2,9 +2,14 @@ package swe
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"time"
+)
+
+import (
+	"github.com/pkg/errors"
 )
 
 import (
@@ -23,20 +28,59 @@ func NewSensorGeoPackage(uri string) *SensorGeoPackage {
 	}
 }
 
-func (sgpkg *SensorGeoPackage) AutoMigrate() {
-	sgpkg.GeoPackage.AutoMigrate()
-	sgpkg.GeoPackage.DB.AutoMigrate(ObservedAirTemperature{})
-	sgpkg.GeoPackage.DB.AutoMigrate(ObservedAirTemperatureMapping{})
-	sgpkg.GeoPackage.DB.AutoMigrate(ObservedBlob{})
-	sgpkg.GeoPackage.DB.AutoMigrate(ObservedBlobMapping{})
-	sgpkg.GeoPackage.DB.AutoMigrate(ObservedWindSpeed{})
-	sgpkg.GeoPackage.DB.AutoMigrate(ObservedWindSpeedMapping{})
-	sgpkg.GeoPackage.DB.AutoMigrate(Sensor{})
-	sgpkg.GeoPackage.DB.AutoMigrate(SensorConnectionInformation{})
-	sgpkg.GeoPackage.DB.AutoMigrate(SensorConnectionInformationMapping{})
-	sgpkg.GeoPackage.DB.AutoMigrate(SensorObservableProperty{})
-	sgpkg.GeoPackage.DB.AutoMigrate(SensorObservablePropertyMapping{})
-	sgpkg.GeoPackage.DB.AutoMigrate(gpkg.Relation{})
+func (sgpkg *SensorGeoPackage) AutoMigrate() error {
+	err := sgpkg.GeoPackage.AutoMigrate()
+	if err != nil {
+		return errors.Wrap(err, "Error migrating GeoPackage tables")
+	}
+	err = sgpkg.GeoPackage.DB.AutoMigrate(ObservedAirTemperature{}).Error
+	if err != nil {
+		return errors.Wrap(err, "Error migrating ObservedAirTemperature")
+	}
+	err = sgpkg.GeoPackage.DB.AutoMigrate(ObservedAirTemperatureMapping{}).Error
+	if err != nil {
+		return errors.Wrap(err, "Error migrating ObservedAirTemperatureMapping")
+	}
+	err = sgpkg.GeoPackage.DB.AutoMigrate(ObservedBlob{}).Error
+	if err != nil {
+		return errors.Wrap(err, "Error migrating ObservedBlob")
+	}
+	err = sgpkg.GeoPackage.DB.AutoMigrate(ObservedBlobMapping{}).Error
+	if err != nil {
+		return errors.Wrap(err, "Error migrating ObservedBlobMapping")
+	}
+	err = sgpkg.GeoPackage.DB.AutoMigrate(ObservedWindSpeed{}).Error
+	if err != nil {
+		return errors.Wrap(err, "Error migrating ObservedWindSpeed")
+	}
+	err = sgpkg.GeoPackage.DB.AutoMigrate(ObservedWindSpeedMapping{}).Error
+	if err != nil {
+		return errors.Wrap(err, "Error migrating ObservedWindSpeedMapping")
+	}
+	err = sgpkg.GeoPackage.DB.AutoMigrate(Sensor{}).Error
+	if err != nil {
+		return errors.Wrap(err, "Error migrating Sensor")
+	}
+	err = sgpkg.GeoPackage.DB.AutoMigrate(SensorConnectionInformation{}).Error
+	if err != nil {
+		return errors.Wrap(err, "Error migrating SensorConnectionInformation")
+	}
+	err = sgpkg.GeoPackage.DB.AutoMigrate(SensorConnectionInformationMapping{}).Error
+	if err != nil {
+		return errors.Wrap(err, "Error migrating SensorConnectionInformationMapping")
+	}
+	err = sgpkg.GeoPackage.DB.AutoMigrate(SensorObservableProperty{}).Error
+	if err != nil {
+		return errors.Wrap(err, "Error migrating SensorObservableProperty")
+	}
+	err = sgpkg.GeoPackage.DB.AutoMigrate(SensorObservablePropertyMapping{}).Error
+	if err != nil {
+		return errors.Wrap(err, "Error migrating SensorObservablePropertyMapping")
+	}
+	err = sgpkg.GeoPackage.DB.AutoMigrate(gpkg.Relation{}).Error
+	if err != nil {
+		return errors.Wrap(err, "Error migrating Relation")
+	}
 
 	relation := gpkg.Relation{
 		BaseTableName:        Sensor{}.TableName(),
@@ -46,7 +90,10 @@ func (sgpkg *SensorGeoPackage) AutoMigrate() {
 		RelationName:         "simple_attributes",
 		MappingTableName:     SensorConnectionInformationMapping{}.TableName(),
 	}
-	sgpkg.GeoPackage.DB.Create(&relation)
+	err = sgpkg.GeoPackage.DB.Create(&relation).Error
+	if err != nil {
+		return errors.Wrap(err, "Error creating relation "+fmt.Sprint(relation))
+	}
 
 	relation = gpkg.Relation{
 		BaseTableName:        Sensor{}.TableName(),
@@ -56,7 +103,10 @@ func (sgpkg *SensorGeoPackage) AutoMigrate() {
 		RelationName:         "simple_attributes",
 		MappingTableName:     SensorObservablePropertyMapping{}.TableName(),
 	}
-	sgpkg.GeoPackage.DB.Create(&relation)
+	err = sgpkg.GeoPackage.DB.Create(&relation).Error
+	if err != nil {
+		return errors.Wrap(err, "Error creating relation "+fmt.Sprint(relation))
+	}
 
 	relation = gpkg.Relation{
 		BaseTableName:        SensorObservableProperty{}.TableName(),
@@ -66,7 +116,10 @@ func (sgpkg *SensorGeoPackage) AutoMigrate() {
 		RelationName:         "simple_attributes",
 		MappingTableName:     ObservedAirTemperatureMapping{}.TableName(),
 	}
-	sgpkg.GeoPackage.DB.Create(&relation)
+	err = sgpkg.GeoPackage.DB.Create(&relation).Error
+	if err != nil {
+		return errors.Wrap(err, "Error creating relation "+fmt.Sprint(relation))
+	}
 
 	relation = gpkg.Relation{
 		BaseTableName:        SensorObservableProperty{}.TableName(),
@@ -76,7 +129,10 @@ func (sgpkg *SensorGeoPackage) AutoMigrate() {
 		RelationName:         "simple_attributes",
 		MappingTableName:     ObservedWindSpeedMapping{}.TableName(),
 	}
-	sgpkg.GeoPackage.DB.Create(&relation)
+	err = sgpkg.GeoPackage.DB.Create(&relation).Error
+	if err != nil {
+		return errors.Wrap(err, "Error creating relation "+fmt.Sprint(relation))
+	}
 
 	relation = gpkg.Relation{
 		BaseTableName:        SensorObservableProperty{}.TableName(),
@@ -86,7 +142,10 @@ func (sgpkg *SensorGeoPackage) AutoMigrate() {
 		RelationName:         "media",
 		MappingTableName:     ObservedBlobMapping{}.TableName(),
 	}
-	sgpkg.GeoPackage.DB.Create(&relation)
+	err = sgpkg.GeoPackage.DB.Create(&relation).Error
+	if err != nil {
+		return errors.Wrap(err, "Error creating relation "+fmt.Sprint(relation))
+	}
 
 	table_names := []string{
 		gpkg.Relation{}.TableName(),
@@ -106,9 +165,12 @@ func (sgpkg *SensorGeoPackage) AutoMigrate() {
 			Definition: "TBD",
 			Scope:      "read-write",
 		}
-		sgpkg.GeoPackage.DB.Create(&extension)
+		err = sgpkg.GeoPackage.DB.Create(&extension).Error
+		if err != nil {
+			return errors.Wrap(err, "Error creating extension "+fmt.Sprint(extension))
+		}
 	}
-
+	return nil
 }
 
 func (sgpkg *SensorGeoPackage) GetSensorsWithinDistance(longitude float64, latitude float64, distance float64) (*SensorList, error) {
@@ -165,13 +227,13 @@ func (sgpkg *SensorGeoPackage) GetConnectionInformation(s *Sensor) (*SensorConne
 	sensorConnectionInformationMapping := &SensorConnectionInformationMapping{}
 	err := sgpkg.GeoPackage.DB.Where(map[string]interface{}{"base_id": s.Id}).First(sensorConnectionInformationMapping).Error
 	if err != nil {
-		return &SensorConnectionInformation{}, err
+		return &SensorConnectionInformation{}, errors.Wrap(err, "Error selecting SensorConnectionInformationMapping with base_id "+fmt.Sprint(s.Id))
 	}
 
 	sensorConnectionInformation := &SensorConnectionInformation{}
 	err = sgpkg.GeoPackage.DB.Where(map[string]interface{}{"id": sensorConnectionInformationMapping.RelatedId}).First(sensorConnectionInformation).Error
 	if err != nil {
-		return &SensorConnectionInformation{}, err
+		return &SensorConnectionInformation{}, errors.Wrap(err, "Error selecting SensorConnectionInformation with id "+fmt.Sprint(sensorConnectionInformationMapping.RelatedId))
 	}
 
 	return sensorConnectionInformation, nil
@@ -182,7 +244,7 @@ func (sgpkg *SensorGeoPackage) GetObservableProperties(s *Sensor) (*SensorObserv
 	sensorObservablePropertyMappings := make([]SensorObservablePropertyMapping, 0)
 	err := sgpkg.GeoPackage.DB.Where(map[string]interface{}{"base_id": s.Id}).Find(&sensorObservablePropertyMappings).Error
 	if err != nil {
-		return &SensorObservablePropertyList{}, err
+		return &SensorObservablePropertyList{}, errors.Wrap(err, "Error selecting SensorObservablePropertyMapping with base_id "+fmt.Sprint(s.Id))
 	}
 
 	sensorObservableProperties := make([]SensorObservableProperty, len(sensorObservablePropertyMappings))
@@ -190,7 +252,7 @@ func (sgpkg *SensorGeoPackage) GetObservableProperties(s *Sensor) (*SensorObserv
 		sensorObservableProperty := SensorObservableProperty{}
 		err = sgpkg.GeoPackage.DB.Where(map[string]interface{}{"id": sensorObservablePropertyMapping.RelatedId}).First(&sensorObservableProperty).Error
 		if err != nil {
-			return &SensorObservablePropertyList{}, err
+			return &SensorObservablePropertyList{}, errors.Wrap(err, "Error selecting SensorObservableProperty with id "+fmt.Sprint(sensorObservablePropertyMapping.RelatedId))
 		}
 		sensorObservableProperties[i] = sensorObservableProperty
 	}
@@ -211,7 +273,7 @@ func (spkg *SensorGeoPackage) UrlGetResultTemplate(sci *SensorConnectionInformat
 func (spkg *SensorGeoPackage) UrlGetResult(sci *SensorConnectionInformation, sop *SensorObservableProperty, rt *ResultTemplate) string {
 	u := sci.SensorObservationServiceEndpoint + "?service=SOS&version=" + sci.SensorObservationServiceVersion + "&request=GetResult&offering=" + sop.SensorIdentifier + "&observableProperty=" + sop.SensorObservableProperty
 
-	if sop.TimeEnd == "now" {
+	if sop.TimeStart == "" && sop.TimeEnd == "now" {
 		u += "&temporalFilter=phenomenonTime,now"
 	} else {
 		u += "&temporalFilter=phenomenonTime," + sop.TimeStart + "/" + sop.TimeEnd
@@ -321,7 +383,7 @@ func (sgpkg *SensorGeoPackage) RequestGetResult(sci *SensorConnectionInformation
 	return &ResultBlob{Blob: body}, nil
 }
 
-func (sgpkg *SensorGeoPackage) Sync(network WifiNetwork, sensors SensorList) error {
+func (sgpkg *SensorGeoPackage) Sync(network *WifiNetwork, sensors *SensorList) error {
 
 	for i := 0; i < sensors.Size(); i++ {
 		sensor := sensors.Item(i)
