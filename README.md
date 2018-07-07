@@ -50,6 +50,10 @@ Options:
     	Prints version to stdout
 ```
 
+# Releases
+
+**go-swe** is currently in **alpha**.  See releases at https://github.com/sandhillgeo/go-swe/releases.
+
 # Building
 
 The `build_cli.sh` script is used to build executables for Linux and Windows.  The `build_android.sh` script is used to build an [Android Archive](https://developer.android.com/studio/projects/android-library) (AAR) file and associated Javadocs.  Given the current limit to [1 go AAR file](https://github.com/golang/go/issues/15956) in an Android application, `build_android.sh` builds the bindings for `go-swe` and `go-gpkg`.

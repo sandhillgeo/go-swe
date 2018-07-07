@@ -90,7 +90,7 @@ func (sgpkg *SensorGeoPackage) AutoMigrate() error {
 		RelationName:         "simple_attributes",
 		MappingTableName:     SensorConnectionInformationMapping{}.TableName(),
 	}
-	err = sgpkg.GeoPackage.DB.Create(&relation).Error
+	err = sgpkg.GeoPackage.DB.Where(relation).Assign(relation).FirstOrCreate(&relation).Error
 	if err != nil {
 		return errors.Wrap(err, "Error creating relation "+fmt.Sprint(relation))
 	}
@@ -103,7 +103,7 @@ func (sgpkg *SensorGeoPackage) AutoMigrate() error {
 		RelationName:         "simple_attributes",
 		MappingTableName:     SensorObservablePropertyMapping{}.TableName(),
 	}
-	err = sgpkg.GeoPackage.DB.Create(&relation).Error
+	err = sgpkg.GeoPackage.DB.Where(relation).Assign(relation).FirstOrCreate(&relation).Error
 	if err != nil {
 		return errors.Wrap(err, "Error creating relation "+fmt.Sprint(relation))
 	}
@@ -116,7 +116,7 @@ func (sgpkg *SensorGeoPackage) AutoMigrate() error {
 		RelationName:         "simple_attributes",
 		MappingTableName:     ObservedAirTemperatureMapping{}.TableName(),
 	}
-	err = sgpkg.GeoPackage.DB.Create(&relation).Error
+	err = sgpkg.GeoPackage.DB.Where(relation).Assign(relation).FirstOrCreate(&relation).Error
 	if err != nil {
 		return errors.Wrap(err, "Error creating relation "+fmt.Sprint(relation))
 	}
@@ -129,7 +129,7 @@ func (sgpkg *SensorGeoPackage) AutoMigrate() error {
 		RelationName:         "simple_attributes",
 		MappingTableName:     ObservedWindSpeedMapping{}.TableName(),
 	}
-	err = sgpkg.GeoPackage.DB.Create(&relation).Error
+	err = sgpkg.GeoPackage.DB.Where(relation).Assign(relation).FirstOrCreate(&relation).Error
 	if err != nil {
 		return errors.Wrap(err, "Error creating relation "+fmt.Sprint(relation))
 	}
@@ -142,7 +142,7 @@ func (sgpkg *SensorGeoPackage) AutoMigrate() error {
 		RelationName:         "media",
 		MappingTableName:     ObservedBlobMapping{}.TableName(),
 	}
-	err = sgpkg.GeoPackage.DB.Create(&relation).Error
+	err = sgpkg.GeoPackage.DB.Where(relation).Assign(relation).FirstOrCreate(&relation).Error
 	if err != nil {
 		return errors.Wrap(err, "Error creating relation "+fmt.Sprint(relation))
 	}
@@ -165,7 +165,7 @@ func (sgpkg *SensorGeoPackage) AutoMigrate() error {
 			Definition: "TBD",
 			Scope:      "read-write",
 		}
-		err = sgpkg.GeoPackage.DB.Create(&extension).Error
+		err = sgpkg.GeoPackage.DB.Where(extension).Assign(extension).FirstOrCreate(&extension).Error
 		if err != nil {
 			return errors.Wrap(err, "Error creating extension "+fmt.Sprint(extension))
 		}
@@ -173,7 +173,18 @@ func (sgpkg *SensorGeoPackage) AutoMigrate() error {
 	return nil
 }
 
-func (sgpkg *SensorGeoPackage) GetSensorsWithinDistance(longitude float64, latitude float64, distance float64) (*SensorList, error) {
+func (sgpkg *SensorGeoPackage) GetSensorsAsSensorList() (*SensorList, error) {
+
+	sensors := make([]Sensor, 0)
+	err := sgpkg.GeoPackage.DB.Find(&sensors).Error
+	if err != nil {
+		return &SensorList{}, err
+	}
+
+	return &SensorList{sensors: sensors}, err
+}
+
+func (sgpkg *SensorGeoPackage) GetSensorsWithinDistanceAsSensorList(longitude float64, latitude float64, distance float64) (*SensorList, error) {
 	// TODO Iterate through all features and see if within certain distance
 
 	sensors := make([]Sensor, 0)
@@ -185,11 +196,48 @@ func (sgpkg *SensorGeoPackage) GetSensorsWithinDistance(longitude float64, latit
 	return &SensorList{sensors: sensors}, err
 }
 
+func (sgpkg *SensorGeoPackage) GetSensorsByWifiNetwork() (*SensorMapByWifiNetwork, error) {
+
+	sensorMapByWifiNetwork := &SensorMapByWifiNetwork{}
+
+	sensorList, err := sgpkg.GetSensorsAsSensorList()
+	if err != nil {
+		return sensorMapByWifiNetwork, err
+	}
+
+	m := map[*WifiNetwork][]Sensor{}
+	for i := 0; i < sensorList.Size(); i++ {
+		sensor := sensorList.Item(i)
+		sensorConnectionInformation, err := sgpkg.GetConnectionInformation(sensor)
+		if err != nil {
+			return sensorMapByWifiNetwork, err
+		}
+		var network *WifiNetwork
+		for k, _ := range m {
+			if sensorConnectionInformation.WiFiSSID == k.WiFiSSID && sensorConnectionInformation.WiFiPassword == k.WiFiPassword {
+				network = k
+			}
+		}
+		if network == nil {
+			network = &WifiNetwork{WiFiSSID: sensorConnectionInformation.WiFiSSID, WiFiPassword: sensorConnectionInformation.WiFiPassword}
+			m[network] = make([]Sensor, 0)
+		}
+		m[network] = append(m[network], *sensor)
+	}
+
+	m2 := map[WifiNetwork]SensorList{}
+	for network, sensors := range m {
+		m2[*network] = SensorList{sensors: sensors}
+	}
+
+	return &SensorMapByWifiNetwork{sensors: m2}, err
+}
+
 func (sgpkg *SensorGeoPackage) GetSensorsWithinDistanceByWifiNetwork(longitude float64, latitude float64, distance float64) (*SensorMapByWifiNetwork, error) {
 
 	sensorMapByWifiNetwork := &SensorMapByWifiNetwork{}
 
-	sensorList, err := sgpkg.GetSensorsWithinDistance(longitude, latitude, distance)
+	sensorList, err := sgpkg.GetSensorsWithinDistanceAsSensorList(longitude, latitude, distance)
 	if err != nil {
 		return sensorMapByWifiNetwork, err
 	}

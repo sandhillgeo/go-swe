@@ -15,7 +15,7 @@ import (
 	"github.com/sandhillgeo/go-swe/swe"
 )
 
-var GO_SWE_VERSION = "0.0.1"
+var GO_SWE_VERSION = "0.0.2"
 
 func printUsage() {
 	fmt.Println("Usage: swe -output_uri OUTPUT_URI [-version] [-help]")
